@@ -16,7 +16,7 @@
   const nome = document.getElementById("nome").value;
   const carboidrati = document.getElementById("carboidrati").value;
 
-  fetch("QUI_IL_TUO_URL", {
+  fetch("https://script.google.com/macros/s/AKfycbwhyFRKxPH6oDZoiWUHoenbJ01onlhpJkxxZp_ArJ0-rcF6ubf354j9BSL190P-YE6_aw/exec", {
     method: "POST",
     body: JSON.stringify({ nome: nome, carboidrati: carboidrati })
   })
