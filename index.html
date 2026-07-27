@@ -13,11 +13,17 @@
 
     <script>
       function invia() {
-        const nome = document.getElementById("nome").value;
-        const carboidrati = document.getElementById("carboidrati").value;
-        
-        console.log(nome, carboidrati); // solo per testare
-      }
+  const nome = document.getElementById("nome").value;
+  const carboidrati = document.getElementById("carboidrati").value;
+
+  fetch("QUI_IL_TUO_URL", {
+    method: "POST",
+    body: JSON.stringify({ nome: nome, carboidrati: carboidrati })
+  })
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(err => console.log("Errore:", err));
+}
     </script>
   </body>
 </html>
