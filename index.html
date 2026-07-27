@@ -21,7 +21,11 @@
     body: JSON.stringify({ nome: nome, carboidrati: carboidrati })
   })
   .then(response => response.json())
-  .then(data => console.log(data))
+  .then(data => {
+  console.log(data);
+  document.getElementById("nome").value = "";
+  document.getElementById("carboidrati").value = "";
+  })
   .catch(err => console.log("Errore:", err));
 }
     </script>
