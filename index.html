@@ -1,9 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html lang="it">
   <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Database Carboidrati</title>
     <style>
+      * { box-sizing: border-box; }   /* i campi non sbordano dal contenitore */
+
       body {
         background-image: url("bilancia_carboidrati.jpg");
         background-size: cover;
@@ -13,7 +16,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        height: 100vh;
+        min-height: 100vh;
         margin: 0;
       }
 
@@ -22,6 +25,7 @@
         padding: 30px;
         border-radius: 15px;
         text-align: center;
+        width: min(400px, 90vw);   /* comodo anche su telefono */
       }
 
       label {
@@ -51,44 +55,92 @@
         cursor: pointer;
       }
 
-      button:hover {
-        background-color: #c73652;
-      }
+      button:hover:not(:disabled) { background-color: #c73652; }
+      button:disabled { opacity: 0.6; cursor: wait; }
+
+      #messaggio { font-weight: bold; min-height: 1.2em; }
+      .ok  { color: #7cfc98; }
+      .err { color: #ff8a8a; }
     </style>
   </head>
   <body>
     <div class="contenitore">
       <h1>Aggiungi un alimento!</h1>
-      <form>
-        <label>Nome:</label>
-        <input type="text" id="nome">
-        
-        <label>Percentuale Carboidrati:</label>
-        <input type="number" id="carboidrati">
-        
-        <button type="button" onclick="invia()">Invia</button>
+
+      <!-- submit: ora funziona anche premendo Invio -->
+      <form id="form">
+        <label for="nome">Nome:</label>
+        <input type="text" id="nome" required maxlength="16">
+
+        <label for="carboidrati">Percentuale Carboidrati:</label>
+        <input type="number" id="carboidrati" required min="0" max="100" step="0.1">
+
+        <button type="submit" id="invia">Invia</button>
       </form>
-      <p id="messaggio"></p>
+
+      <p id="messaggio" role="status"></p>
     </div>
 
     <script>
-      function invia() {
-        const nome = document.getElementById("nome").value;
-        const carboidrati = document.getElementById("carboidrati").value;
+      const URL_DB = "https://script.google.com/macros/s/AKfycbwhyFRKxPH6oDZoiWUHoenbJ01onlhpJkxxZp_ArJ0-rcF6ubf354j9BSL190P-YE6_aw/exec";
 
-        fetch("https://script.google.com/macros/s/AKfycbwhyFRKxPH6oDZoiWUHoenbJ01onlhpJkxxZp_ArJ0-rcF6ubf354j9BSL190P-YE6_aw/exec", {
-          method: "POST",
-          body: JSON.stringify({ nome: nome, carboidrati: carboidrati })
-        })
-        .then(response => response.json())
-        .then(data => {
-          console.log(data);
-          document.getElementById("nome").value = "";
-          document.getElementById("carboidrati").value = "";
-          document.getElementById("messaggio").textContent = "Inviato con successo!";
-        })
-        .catch(err => console.log("Errore:", err));
+      const form = document.getElementById("form");
+      const nome = document.getElementById("nome");
+      const carboidrati = document.getElementById("carboidrati");
+      const bottone = document.getElementById("invia");
+      const messaggio = document.getElementById("messaggio");
+
+      function scriviMessaggio(testo, classe) {
+        messaggio.textContent = testo;
+        messaggio.className = classe;
       }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();               // niente ricaricamento della pagina
+
+        const nomeVal = nome.value.trim();
+        const carbVal = parseFloat(carboidrati.value);
+
+        // Doppia rete di sicurezza (required/min/max li controlla già il browser)
+        if (nomeVal.length === 0) { scriviMessaggio("Inserisci un nome!", "err"); return; }
+        if (!isFinite(carbVal) || carbVal < 0 || carbVal > 100) {
+          scriviMessaggio("Carboidrati tra 0 e 100!", "err");
+          return;
+        }
+
+        bottone.disabled = true;          // niente doppio invio
+        scriviMessaggio("Invio in corso...", "");
+
+        try {
+          // Niente header Content-Type: la richiesta resta "semplice" e
+          // Google la accetta senza preflight CORS (con application/json verrebbe bloccata)
+          const risposta = await fetch(URL_DB, {
+            method: "POST",
+            body: JSON.stringify({ nome: nomeVal, carboidrati: carbVal })
+          });
+
+          if (!risposta.ok) throw new Error("HTTP " + risposta.status);
+
+          // Se lo script risponde {ok:true} lo seguiamo, altrimenti fidati dell'HTTP 200
+          let ok = true;
+          try {
+            const dati = await risposta.json();
+            if (typeof dati.ok === "boolean") ok = dati.ok;
+          } catch (_) { /* risposta non JSON: l'HTTP è ok, va bene lo stesso */ }
+
+          if (ok) {
+            scriviMessaggio("Inviato con successo!", "ok");
+            form.reset();                 // pulisce i campi
+            nome.focus();
+          } else {
+            scriviMessaggio("Il server ha rifiutato i dati", "err");
+          }
+        } catch (err) {
+          scriviMessaggio("Errore di connessione, riprova", "err");
+        } finally {
+          bottone.disabled = false;       // riattivato SEMPRE, anche in caso di errore
+        }
+      });
     </script>
   </body>
 </html>
